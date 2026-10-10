@@ -21,8 +21,14 @@
  * escribe aquí su número, por ejemplo GPIO_NUM_xx, compila y graba.
  */
 #define PIN_LED              GPIO_NUM_4
+#define PIN_PULSADOR         GPIO_NUM_5
 
 /* Nivel lógico que enciende el LED. Lo decide el montaje, no el código:
  *   1 si el LED y su resistencia van entre el pin y masa;
  *   0 si van entre el pin y 3,3 V. */
 #define LED_NIVEL_ENCENDIDO  1
+
+/* Nivel lógico que se lee con el pulsador apretado. Lo decide el montaje:
+ *   0 si el pulsador va entre el pin y masa, con pull-up: es el de la sesión;
+ *   1 si va entre el pin y 3,3 V, con pull-down. */
+#define PULSADOR_NIVEL_PULSADO  0
