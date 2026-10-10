@@ -24,7 +24,7 @@ esp_err_t pulsador_iniciar(pulsador_t *pulsador, gpio_num_t pin, int nivel_pulsa
 
     pulsador->pin = pin;
     pulsador->nivel_pulsado = nivel_pulsado ? 1 : 0;
-    pulsador->polarizado = true;
+    pulsador->polarizado = true; //False si tengo resistencia externa de polarización, true si la polarización es interna
 
     /* Con el pulsador a masa, el reposo es el nivel alto y lo da el pull-up;
      * pulsar lleva el pin a nivel bajo, y la interrupción se pide en el
