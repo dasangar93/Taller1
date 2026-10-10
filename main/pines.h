@@ -32,3 +32,22 @@
  *   0 si el pulsador va entre el pin y masa, con pull-up: es el de la sesión;
  *   1 si va entre el pin y 3,3 V, con pull-down. */
 #define PULSADOR_NIVEL_PULSADO  0
+
+/* Pines del bus I2C: SDA, la línea de datos, y SCL, la de reloj.
+ *
+ * GPIO_NUM_NC significa «sin conectar»: el repositorio llega así a propósito,
+ * porque los pines los eliges tú. Mientras no los cambies, la consola funciona,
+ * pero los comandos del bus avisan de que no hay pines.
+ *
+ * Para elegirlos, abre el esquema de tu placa y la tabla de pines de la hoja de
+ * características del ESP32-S3, y descarta los que sirven a la memoria externa,
+ * los de arranque, los del USB y la consola y los que la placa ya usa. Después
+ * escribe aquí sus números, por ejemplo GPIO_NUM_xx, compila y graba.
+ *
+ * Las resistencias de pull-up del bus no van en la protoboard: en el montaje del
+ * taller las lleva la placa del sensor. Compruébalo en su esquema. Si la tuya
+ * no las lleva, el bus necesita un par externo. El proyecto deja desactivadas
+ * las internas del ESP32-S3.
+ */
+#define PIN_SDA     GPIO_NUM_8
+#define PIN_SCL     GPIO_NUM_9

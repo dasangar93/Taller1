@@ -31,14 +31,20 @@
 
 #include "led.h"
 #include "pines.h"
-#include <pulsador.h>
+#include "pulsador.h"
+#include "I2C.h"
+#include "BME280.h"
 
 static led_t s_led;
 static pulsador_t s_pulsador;
 static TaskHandle_t s_tarea_entrada;
+static bus_i2c_t s_bus_i2c;
+static bme280_t s_bme280;
 
-#define ENCENDIDO_MS  500
-#define APAGADO_MS    500
+
+#define ENCENDIDO_MS      500
+#define APAGADO_MS        500
+#define DIRECCION_BME280  0x76u
 
 static void tarea_parpadeo(void *argumento)
 {
@@ -83,6 +89,15 @@ void app_main(void)
 {
     led_iniciar(&s_led, PIN_LED, LED_NIVEL_ENCENDIDO);
     xTaskCreate(tarea_parpadeo, "parpadeo", 2048, NULL, 5, NULL);
+
+    bus_i2c_iniciar(&s_bus_i2c, PIN_SDA, PIN_SCL, false);
+    ESP_LOGI("i2c", "Bus I2C inicializado (SDA=%d, SCL=%d)", PIN_SDA, PIN_SCL);
+
+    ESP_ERROR_CHECK(bme280_iniciar(&s_bme280, s_bus_i2c.manejador,
+                                  DIRECCION_BME280, 100000));
+    ESP_LOGI("bme280", "Sensor BME280 conectado y configurado");
+
+    ESP_ERROR_CHECK(bme280_iniciar_tarea_lectura(&s_bme280));
 
     ESP_ERROR_CHECK(pulsador_iniciar(&s_pulsador, PIN_PULSADOR,
                                      PULSADOR_NIVEL_PULSADO));
