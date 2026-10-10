@@ -32,8 +32,8 @@
 
 static led_t s_led;
 
-#define ENCENDIDO_MS  500;
-#define APAGADO_MS    500;
+#define ENCENDIDO_MS  500
+#define APAGADO_MS    500
 
 static void tarea_parpadeo(void *argumento)
 {
@@ -41,17 +41,18 @@ static void tarea_parpadeo(void *argumento)
 
     TickType_t referencia = xTaskGetTickCount();
 
-    led_encender(&s_led);
-    xTaskDelayUntil(referencia, pdMS_TO_TICKS(duracion_ms));
+    for (;;) {
+        led_encender(&s_led);
+        xTaskDelayUntil(&referencia, pdMS_TO_TICKS(ENCENDIDO_MS));
 
-    led_apagar(&s_led);
-    xTaskDelayUntil(referencia, pdMS_TO_TICKS(duracion_ms));
+        led_apagar(&s_led);
+        xTaskDelayUntil(&referencia, pdMS_TO_TICKS(APAGADO_MS));
+    }
 }
 
 
 void app_main(void)
 {
-    led_iniciar(&s_led, LED, LED_NIVEL_ENCENDIDO);
-    tarea_parpadeo();
-
+    led_iniciar(&s_led, PIN_LED, LED_NIVEL_ENCENDIDO);
+    xTaskCreate(tarea_parpadeo, "parpadeo", 2048, NULL, 5, NULL);
 }
