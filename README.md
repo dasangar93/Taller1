@@ -16,8 +16,8 @@ proyecto.
 | --- | --- | --- | --- |
 | LED | [`components/led/`](components/led/) | Configura un GPIO como salida y permite encender, apagar o conmutar el LED. | 4 |
 | Pulsador | [`components/pulsador/`](components/pulsador/) | Configura un GPIO como entrada y permite consultar su nivel y estado. | 5 |
-| Bus I2C | [`components/I2C/`](components/I2C/) | Inicializa y libera el bus I2C, y permite explorar las direcciones de dispositivos. | SCL 9 |
-| Sensor BME280 | [`components/BME280/`](components/BME280/) | Se comunica con el BME280 por I2C y obtiene temperatura, presión y humedad. | SDA 8 |
+| Bus I2C | [`components/bus_i2c/`](components/bus_i2c/) | Inicializa y libera el bus I2C, y permite explorar las direcciones de dispositivos. | SCL 9 |
+| Sensor BME280 | [`components/bme280/`](components/bme280/) | Se comunica con el BME280 por I2C y comprueba su identificador. | SDA 8 |
 
 La aplicación de [`main/main.c`](main/main.c) integra estos componentes y
 gestiona la consola UART, las tareas de FreeRTOS y la interrupción del
@@ -33,9 +33,10 @@ escribir:
 | --- | --- |
 | `q` | Inicia el parpadeo del LED. |
 | `w` | Activa la lectura del pulsador mediante interrupción. |
-| `s` | Inicia el bus I2C e intenta comenzar la lectura periódica del BME280. |
+| `s` | Inicia el bus I2C e identifica el BME280 leyendo su registro de identificación. |
 
-El LED cambia de estado cada 500 ms. El BME280 se lee cada dos segundos.
+El LED cambia de estado cada 500 ms. Cada vez que se pulsa `s`, se lee el
+identificador del sensor para comprobar que responde como un BME280.
 Los periféricos y el sensor son opcionales, pero para que cada función opere
 correctamente deben estar conectados a los pines indicados en
 [`main/pines.h`](main/pines.h), y el BME280 debe responder en la dirección I2C

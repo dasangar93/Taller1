@@ -28,8 +28,8 @@
 #include "led.h"
 #include "pines.h"
 #include "pulsador.h"
-#include "I2C.h"
-#include "BME280.h"
+#include "bus_i2c.h"
+#include "bme280.h"
 
 static led_t s_led;
 static pulsador_t s_pulsador;
@@ -39,7 +39,7 @@ static bme280_t s_bme280;
 static bool s_led_iniciado;
 static bool s_parpadeo_activo;
 static bool s_pulsador_activo;
-static bool s_lectura_bme280_activa;
+static bool s_bme280_iniciado;
 
 #define ENCENDIDO_MS      500
 #define APAGADO_MS        500
@@ -154,11 +154,6 @@ static void iniciar_pulsador(void)
 
 static void iniciar_bme280(void)
 {
-    if (s_lectura_bme280_activa) {
-        ESP_LOGI("consola", "La lectura del BME280 ya esta activa");
-        return;
-    }
-
     if (s_bus_i2c.manejador == NULL) {
         const esp_err_t error = bus_i2c_iniciar(&s_bus_i2c, PIN_SDA, PIN_SCL, false);
         if (error != ESP_OK) {
@@ -169,33 +164,30 @@ static void iniciar_bme280(void)
         ESP_LOGI("i2c", "Bus I2C inicializado (SDA=%d, SCL=%d)", PIN_SDA, PIN_SCL);
     }
 
-    if (s_bme280.manejador == NULL) {
+    if (!s_bme280_iniciado) {
         const esp_err_t error = bme280_iniciar(&s_bme280, s_bus_i2c.manejador,
                                                DIRECCION_BME280, 100000);
         if (error != ESP_OK) {
-            if (s_bme280.manejador != NULL) {
-                const esp_err_t limpieza = bme280_quitar(&s_bme280);
-                if (limpieza != ESP_OK) {
-                    ESP_LOGE("consola", "No se pudo liberar el BME280: %s",
-                             esp_err_to_name(limpieza));
-                }
-            }
             ESP_LOGE("consola", "No se pudo iniciar el BME280: %s",
                      esp_err_to_name(error));
             return;
         }
+        s_bme280_iniciado = true;
         ESP_LOGI("bme280", "Sensor BME280 conectado y configurado");
     }
 
-    const esp_err_t error = bme280_iniciar_tarea_lectura(&s_bme280);
+    uint8_t id;
+    const esp_err_t error = bme280_leer_id(&s_bme280, &id);
     if (error != ESP_OK) {
-        ESP_LOGE("consola", "No se pudo iniciar la lectura del BME280: %s",
+        ESP_LOGE("consola", "No se pudo leer el identificador del BME280: %s",
                  esp_err_to_name(error));
         return;
     }
-
-    s_lectura_bme280_activa = true;
-    ESP_LOGI("consola", "Lectura del BME280 iniciada (cada 2 segundos)");
+    if (id != BME280_ID) {
+        ESP_LOGE("consola", "Identificador BME280 inesperado: 0x%02X", id);
+        return;
+    }
+    ESP_LOGI("consola", "BME280 identificado (ID=0x%02X)", id);
 }
 
 static void mostrar_ayuda(void)
@@ -203,7 +195,7 @@ static void mostrar_ayuda(void)
     printf("\nComandos por UART0:\n"
            "  q - iniciar el parpadeo del LED\n"
            "  w - activar la lectura del pulsador\n"
-           "  s - iniciar I2C y la lectura periodica del BME280\n"
+           "  s - iniciar I2C e identificar el BME280\n"
            "Escribe una tecla para ejecutar el comando. "
            "Pulsa q, w o s; cualquier otra tecla es un error.\n\n");
     fflush(stdout);
