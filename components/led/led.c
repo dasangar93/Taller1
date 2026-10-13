@@ -15,7 +15,8 @@ static const char *TAG = "led";
 static void escribir(led_t *led, bool encender)
 {
     led->encendido = encender;
-    if (led->pin == GPIO_NUM_NC) {
+    if (led->pin == GPIO_NUM_NC)
+    {
         return;
     }
     const int nivel = encender ? led->nivel_encendido : !led->nivel_encendido;
@@ -24,7 +25,8 @@ static void escribir(led_t *led, bool encender)
 
 esp_err_t led_iniciar(led_t *led, gpio_num_t pin, int nivel_encendido)
 {
-    if (led == NULL) {
+    if (led == NULL)
+    {
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -32,12 +34,14 @@ esp_err_t led_iniciar(led_t *led, gpio_num_t pin, int nivel_encendido)
     led->nivel_encendido = nivel_encendido ? 1 : 0;
     led->encendido = false;
 
-    if (pin == GPIO_NUM_NC) {
+    if (pin == GPIO_NUM_NC)
+    {
         ESP_LOGW(TAG, "sin pin asignado: no se mueve ningun pin, solo se cuenta el estado");
         return ESP_OK;
     }
 
-    if (!GPIO_IS_VALID_OUTPUT_GPIO(pin)) {
+    if (!GPIO_IS_VALID_OUTPUT_GPIO(pin))
+    {
         ESP_LOGE(TAG, "el GPIO %d no existe o no puede ser salida", (int)pin);
         return ESP_ERR_INVALID_ARG;
     }
@@ -62,7 +66,8 @@ esp_err_t led_iniciar(led_t *led, gpio_num_t pin, int nivel_encendido)
     };
 
     const esp_err_t error = gpio_config(&configuracion);
-    if (error != ESP_OK) {
+    if (error != ESP_OK)
+    {
         ESP_LOGE(TAG, "no se ha podido configurar el GPIO %d: %s",
                  (int)pin, esp_err_to_name(error));
         return error;
