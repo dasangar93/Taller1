@@ -12,12 +12,12 @@ principal pueda utilizar cada funcionalidad de forma independiente. Por tanto,
 estos componentes no se presentan como implementaciones originales de este
 proyecto.
 
-| Componente | Código | Función |
-| --- | --- | --- |
-| LED | [`components/led/`](components/led/) | Configura un GPIO como salida y permite encender, apagar o conmutar el LED. |
-| Pulsador | [`components/pulsador/`](components/pulsador/) | Configura un GPIO como entrada y permite consultar su nivel y estado. |
-| Bus I2C | [`components/I2C/`](components/I2C/) | Inicializa y libera el bus I2C, y permite explorar las direcciones de dispositivos. |
-| Sensor BME280 | [`components/BME280/`](components/BME280/) | Se comunica con el BME280 por I2C y obtiene temperatura, presión y humedad. |
+| Componente | Código | Función | Pin |
+| --- | --- | --- | --- |
+| LED | [`components/led/`](components/led/) | Configura un GPIO como salida y permite encender, apagar o conmutar el LED. | 4 |
+| Pulsador | [`components/pulsador/`](components/pulsador/) | Configura un GPIO como entrada y permite consultar su nivel y estado. | 5 |
+| Bus I2C | [`components/I2C/`](components/I2C/) | Inicializa y libera el bus I2C, y permite explorar las direcciones de dispositivos. | SCL9 |
+| Sensor BME280 | [`components/BME280/`](components/BME280/) | Se comunica con el BME280 por I2C y obtiene temperatura, presión y humedad. | SDA 8 |
 
 La aplicación de [`main/main.c`](main/main.c) integra estos componentes y
 gestiona la consola UART, las tareas de FreeRTOS y la interrupción del
