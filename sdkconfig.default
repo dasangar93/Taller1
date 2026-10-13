@@ -1,2 +1,11 @@
+# Valores de partida del proyecto. Este fichero se escribe a mano y se versiona;
+# sdkconfig lo genera la herramienta y no se versiona.
+
+# Sin esto, el destino de compilacion por omision no es el de la asignatura.
 CONFIG_IDF_TARGET="esp32s3"
+
+# Frecuencia del tic del planificador. A 1000 Hz el tic dura 1 ms, y el sondeo
+# puede leer el pin cada milisegundo. Con el valor por omision, 100 Hz, el
+# periodo mas corto seria de 10 ms. Es la frecuencia de todos los proyectos de
+# la asignatura.
 CONFIG_FREERTOS_HZ=1000
