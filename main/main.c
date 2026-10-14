@@ -23,6 +23,8 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_attr.h"
+#include "esp_timer.h"
+#include "freertos/queue.h"
 
 #include "led.h"
 #include "pines.h"
@@ -31,14 +33,10 @@
 #include "bme280.h"
 
 /* Etiqueta de los mensajes de arranque de la aplicación. */
-static const char *TAG_init = "inicio";
+static const char *TAG = "taller-1";
 
-/* Instancias compartidas por las tareas y las rutinas de interrupción. */
+/*--------------------LED--------------------*/
 static led_t s_led;
-static pulsador_t s_pulsador;
-static TaskHandle_t s_tarea_entrada;
-static bus_i2c_t s_bus_i2c;
-static bme280_t s_bme280;
 
 /* Duración de cada fase del parpadeo, derivada de la configuración del
  * proyecto. El tiempo apagado completa el período después del encendido.
@@ -48,12 +46,26 @@ static bme280_t s_bme280;
 #define ENCENDIDO_MS (PERIODO_LED_MS * CICLO_TRABAJO_ENCENDIDO)
 #define APAGADO_MS (PERIODO_LED_MS - ENCENDIDO_MS)
 
-/* Dirección I2C de 7 bits configurada para el BME280. */
-#define DIRECCION_BME280 0x76u
+/*--------------------PULSADOR--------------------*/
+static pulsador_t s_pulsador;
 
-/* Alterna el LED según el período configurado. La espera hasta una referencia
- * fija mantiene el ritmo aunque una iteración se retrase.
+/* Datos temporales que se toman durante la interrupción. Se emplea para implementar
+ * una guarda temporal y filtrar el rebote del pulsaador.
  */
+typedef struct
+{
+    int64_t us;
+} evento_t;
+
+#define VENTANA_ANTIRREBOTE_US (CONFIG_SEYTR_GUARDA_MS * 1000LL)
+#define LONGITUD_COLA CONFIG_SEYTR_TAMANO_COLA
+
+static QueueHandle_t s_cola;
+
+/* ------------------------------------------------------------------------
+ * La tarea LED: Alterna el LED según el período configurado
+ * ------------------------------------------------------------------------ */
+
 static void tarea_parpadeo(void *argumento)
 {
     (void)argumento;
@@ -70,63 +82,79 @@ static void tarea_parpadeo(void *argumento)
     }
 }
 
-/* Atiende las notificaciones del pulsador y registra su nivel lógico y el
- * resultado de la interpretación del estado pulsado.
- */
-static void tarea_leer_entrada(void *argumento)
+/* ------------------------------------------------------------------------
+ * La tarea pulasdor:
+ * ------------------------------------------------------------------------ */
+
+static void IRAM_ATTR btn_isr(void *arg)
+{
+    evento_t e = {.us = esp_timer_get_time()};
+    BaseType_t hp = pdFALSE;
+    xQueueSendFromISR(s_cola, &e, &hp);
+    if (hp)
+        portYIELD_FROM_ISR();
+}
+
+static void tarea_entrada(void *argumento)
 {
     (void)argumento;
+
+    /* Permite aceptar la primera pulsación desde el arranque. */
+    int64_t ultima_aceptada_us = 0;
 
     for (;;)
     {
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        evento_t e;
+        xQueueReceive(s_cola, &e, portMAX_DELAY);
 
-        const int nivel = pulsador_nivel(&s_pulsador);
-        ESP_LOGI("pulsador", "nivel del pin: %d", nivel);
+        if (e.us - ultima_aceptada_us < VENTANA_ANTIRREBOTE_US)
+            continue;
 
-        const bool pulsado = pulsador_pulsado(&s_pulsador);
-        ESP_LOGI("pulsador", "pulsado: %s", pulsado ? "true" : "false");
+        ultima_aceptada_us = esp_timer_get_time();
+
+        ESP_LOGI(TAG, "Pulsacion valida: %lu", (unsigned long)contador);
     }
-}
-
-/* Rutina de interrupción: despierta la tarea para procesar el pulsador fuera
- * del contexto de interrupción.
- */
-static void IRAM_ATTR leer_entrada(void *argumento)
-{
-    (void)argumento;
-
-    BaseType_t tarea_despertada = pdFALSE;
-    vTaskNotifyGiveFromISR(s_tarea_entrada, &tarea_despertada);
-    portYIELD_FROM_ISR(tarea_despertada);
 }
 
 void app_main(void)
 {
     /* Informa de la frecuencia del tick configurada en FreeRTOS. */
-    ESP_LOGI(TAG_init, "SEyTR - Taller 1. Tick a %d Hz",
-             CONFIG_FREERTOS_HZ);
+    ESP_LOGI(TAG, "SEyTR - Taller 1. Tick a %d Hz", configTICK_RATE_HZ);
+
+    if (configTICK_RATE_HZ != 1000)
+    {
+        ESP_LOGW(TAG, "el tic no esta a 1000 Hz.");
+    }
 
     ESP_ERROR_CHECK(led_iniciar(&s_led, PIN_LED, LED_NIVEL_ENCENDIDO));
 
     ESP_ERROR_CHECK(pulsador_iniciar(&s_pulsador, PIN_PULSADOR, PULSADOR_NIVEL_PULSADO));
+    /*Se desactiva la resistencia de interna porque el montaje está pensado para pull-up externo.*/
+    ESP_ERROR_CHECK(pulsador_polarizar(&s_pulsador, false));
 
-    ESP_ERROR_CHECK(bus_i2c_iniciar(&s_bus_i2c, PIN_SDA, PIN_SCL, false));
-    ESP_ERROR_CHECK(bme280_iniciar(&s_bme280, s_bus_i2c.manejador, DIRECCION_BME280, 100000));
-
-    /* Instala UART0 con 256 bytes de recepción y enlaza su controlador a
-     * la entrada/salida estándar gestionada por VFS.
-     */
-    ESP_ERROR_CHECK(uart_driver_install(UART_NUM_0, 256, 0, 0, NULL, 0));
-    uart_vfs_dev_use_driver(UART_NUM_0);
-
-    // Preparar aquí el servicio y el manejador de interrupción del pulsador.
-
-    if (xTaskCreate(tarea_parpadeo, "parpadeo", 2048, NULL, 5, NULL) != pdPASS)
+    s_cola = xQueueCreate(LONGITUD_COLA, sizeof(evento_t));
+    if (s_cola == NULL)
     {
-        ESP_LOGE(TAG_init, "No se pudo crear la tarea de parpadeo");
+        ESP_LOGE(TAG, "no hay memoria para las colas");
         return;
     }
 
-    // Crear aquí las otras tareas, una vez listos sus recursos.
+    /* El servicio de interrupciones de GPIO se instala una sola vez para todo
+     * el proyecto. Con 0, sin ESP_INTR_FLAG_IRAM. */
+    ESP_ERROR_CHECK(gpio_install_isr_service(0));
+    ESP_ERROR_CHECK(gpio_isr_handler_add(PIN_PULSADOR, btn_isr, NULL));
+
+    /* «entrada» tiene la prioridad más alta de las tres, para que ni la
+     * consola ni el teclado retrasen la lectura del pin. */
+    const BaseType_t parpadeo =
+        xTaskCreate(tarea_parpadeo, "parpadeo", 2048, NULL, 5, NULL);
+    const BaseType_t entrada =
+        xTaskCreate(tarea_entrada, "entrada", 4096, NULL, 10, NULL);
+    if (parpadeo != pdPASS || entrada != pdPASS)
+    {
+        ESP_LOGE(TAG, "no hay memoria para las tareas");
+        return;
+    }
+
+    /* app_main termina aquí; las tres tareas siguen. */
 }

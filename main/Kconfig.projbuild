@@ -9,18 +9,37 @@
 menu "SEyTR - Taller 1"
 
         config SEYTR_PERIODO_LED_MS
-        int "Tiempo que dura un periodo (apagado-encendido), en milisegundos"
-        range 100 10000
-        default 1000
-        help
-            Tiempo entre dos encendidos consecutivos del LED. Con el tic a 1000 Hz,
-            cada milisegundo es un tic.
+            int "Tiempo que dura un periodo (apagado-encendido), en milisegundos"
+            range 100 10000
+            default 1000
+            help
+                Tiempo entre dos encendidos consecutivos del LED. Con el tic a 1000 Hz,
+                cada milisegundo es un tic.
 
         config SEYTR_DUTY_CYCLE_LED
-        int "Porcentaje de encendido en un periodo, en tanto por ciento"
-        range 1 100
-        default 50
-        help 
-            Con el porcentaje de encendido a 50 la mitad del
-            periodo esta encendido y la otra mitad, apagado.
+            int "Porcentaje de encendido en un periodo, en tanto por ciento"
+            range 1 100
+            default 50
+            help 
+                Con el porcentaje de encendido a 50 la mitad del
+                periodo esta encendido y la otra mitad, apagado.
+
+        config SEYTR_GUARDA_MS
+            int "Tiempo de guarda antirebote, en milisegundos"
+            range 1 500
+            default 50
+            help
+                Tiempo de la ventana temporal que descarta lo que 
+                llegue demasiado pronto.
+
+        config SEYTR_TAMANO_COLA
+            int "Tamaño de la cola de tareas, usada para atender el pulsador"
+            range 5 50
+            default 10
+            help
+                Define el número máximo de tareas pendientes que puede almacenar
+                la cola de atención del pulsador. Un valor mayor permite procesar
+                más eventos antes de que se saturen, pero aumenta el consumo de
+                memoria y puede afectar al tiempo de respuesta.
+
 endmenu
