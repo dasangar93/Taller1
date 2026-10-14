@@ -1,5 +1,6 @@
 #include "tarea_pulsador.h"
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "freertos/FreeRTOS.h"
@@ -20,7 +21,7 @@ typedef struct
     int64_t instante_us;
 } evento_pulsador_t;
 
-static const char *TAG = "taller-1";
+static const char *TAG = "traza-pulsador";
 static pulsador_t s_pulsador;
 static QueueHandle_t s_cola;
 
@@ -109,4 +110,14 @@ esp_err_t tarea_pulsador_iniciar(void)
     }
 
     return ESP_OK;
+}
+
+int tarea_pulsador_nivel(void)
+{
+    return pulsador_nivel(&s_pulsador);
+}
+
+void tarea_pulsador_mostrar_trazas(bool mostrar)
+{
+    esp_log_level_set(TAG, mostrar ? ESP_LOG_INFO : ESP_LOG_NONE);
 }

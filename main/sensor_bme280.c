@@ -31,8 +31,11 @@
 #define BME280_TASK_PERIOD_MS 2000
 
 static const char *TAG = "bme280";
+static const char *TAG_TRAZAS = "traza-sensor";
 static bus_i2c_t s_bus;
 static bme280_t s_sensor;
+static sensor_bme280_estado_t s_estado;
+static portMUX_TYPE s_mux_estado = portMUX_INITIALIZER_UNLOCKED;
 
 typedef struct
 {
@@ -193,6 +196,11 @@ static esp_err_t inicializar_medicion(bme280_t *sensor)
         ESP_LOGE(TAG, "ID inesperado: 0x%02X (esperado 0x%02X)", id, BME280_ID);
         return ESP_ERR_INVALID_RESPONSE;
     }
+    portENTER_CRITICAL(&s_mux_estado);
+    s_estado.dispositivo_detectado = true;
+    s_estado.direccion = sensor->direccion;
+    s_estado.id = id;
+    portEXIT_CRITICAL(&s_mux_estado);
     ESP_LOGI(TAG, "BME280 detectado: direccion=0x%02X, ID=0x%02X",
              sensor->direccion, id);
 
@@ -360,12 +368,19 @@ static void tarea_sensor(void *argumento)
         esp_err_t err = leer_medicion(sensor, &medicion);
         if (err == ESP_OK)
         {
+            portENTER_CRITICAL(&s_mux_estado);
+            s_estado.medicion_disponible = true;
+            s_estado.temperatura_centigrados = medicion.temperatura_centigrados;
+            s_estado.presion_pa = medicion.presion_pa;
+            s_estado.humedad_centiporcentaje = medicion.humedad_centiporcentaje;
+            portEXIT_CRITICAL(&s_mux_estado);
+
             const bool temperatura_negativa = medicion.temperatura_centigrados < 0;
             const uint32_t temperatura_absoluta =
                 temperatura_negativa
                     ? (uint32_t)(-(int64_t)medicion.temperatura_centigrados)
                     : (uint32_t)medicion.temperatura_centigrados;
-            ESP_LOGI(TAG,
+            ESP_LOGI(TAG_TRAZAS,
                      "BME280: T=%s%" PRIu32 ".%02" PRIu32
                      " C, P=%" PRIu32 ".%02" PRIu32
                      " hPa, HR=%" PRIu32 ".%02" PRIu32 "%%",
@@ -411,4 +426,23 @@ esp_err_t sensor_bme280_iniciar(void)
     }
 
     return ESP_OK;
+}
+
+esp_err_t sensor_bme280_estado(sensor_bme280_estado_t *estado)
+{
+    if (estado == NULL)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    portENTER_CRITICAL(&s_mux_estado);
+    *estado = s_estado;
+    portEXIT_CRITICAL(&s_mux_estado);
+
+    return estado->dispositivo_detectado ? ESP_OK : ESP_ERR_INVALID_STATE;
+}
+
+void sensor_bme280_mostrar_trazas(bool mostrar)
+{
+    esp_log_level_set(TAG_TRAZAS, mostrar ? ESP_LOG_INFO : ESP_LOG_NONE);
 }

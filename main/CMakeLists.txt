@@ -1,8 +1,19 @@
 idf_component_register(
     SRCS
         "main.c"
+        "tarea_consola.c"
         "tarea_led.c"
         "tarea_pulsador.c"
         "sensor_bme280.c"
     INCLUDE_DIRS "."
+    REQUIRES
+        bme280
+        bus_i2c
+        consola
+        esp_driver_gpio
+        esp_driver_i2c
+        esp_driver_uart
+        esp_timer
+        led
+        pulsador
 )

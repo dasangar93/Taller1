@@ -14,10 +14,12 @@
 #include "sensor_bme280.h"
 #include "tarea_led.h"
 #include "tarea_pulsador.h"
+#include "tarea_consola.h"
 
 void app_main(void)
 {
     ESP_ERROR_CHECK(tarea_led_iniciar());
     ESP_ERROR_CHECK(tarea_pulsador_iniciar());
     ESP_ERROR_CHECK(sensor_bme280_iniciar());
+    ESP_ERROR_CHECK(tarea_consola_iniciar());
 }
