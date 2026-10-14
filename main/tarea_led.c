@@ -1,9 +1,12 @@
 #include "tarea_led.h"
 
+#include <inttypes.h>
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 #include "esp_log.h"
+#include "esp_timer.h"
 
 #include "led.h"
 #include "pines.h"
@@ -46,10 +49,20 @@ void tarea_led(void *argumento)
 
     for (;;)
     {
+        const int64_t inicio_periodo_us = esp_timer_get_time();
         led_encender(&s_led);
         xTaskDelayUntil(&referencia, pdMS_TO_TICKS(ENCENDIDO_MS));
 
         led_apagar(&s_led);
+        const int64_t fin_encendido_us = esp_timer_get_time();
         xTaskDelayUntil(&referencia, pdMS_TO_TICKS(APAGADO_MS));
+
+        const int64_t fin_periodo_us = esp_timer_get_time();
+        ESP_LOGI(TAG,
+                 "LED: encendido=%" PRId64 " us, apagado=%" PRId64
+                 " us, periodo=%" PRId64 " us",
+                 fin_encendido_us - inicio_periodo_us,
+                 fin_periodo_us - fin_encendido_us,
+                 fin_periodo_us - inicio_periodo_us);
     }
 }

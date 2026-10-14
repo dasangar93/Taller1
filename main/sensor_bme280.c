@@ -193,6 +193,8 @@ static esp_err_t inicializar_medicion(bme280_t *sensor)
         ESP_LOGE(TAG, "ID inesperado: 0x%02X (esperado 0x%02X)", id, BME280_ID);
         return ESP_ERR_INVALID_RESPONSE;
     }
+    ESP_LOGI(TAG, "BME280 detectado: direccion=0x%02X, ID=0x%02X",
+             sensor->direccion, id);
 
     err = cargar_calibracion(sensor);
     if (err != ESP_OK)
@@ -322,8 +324,9 @@ static uint32_t compensar_humedad(uint16_t adc_humedad, int64_t t_fine)
         humedad = 419430400;
     }
 
-    /* El registro compensado está en Q22.10; convertirlo a centésimas de %. */
-    return (uint32_t)((humedad * 100 + 512) >> 10);
+    /* El cálculo Bosch queda en Q22.10 tras quitar los 12 bits fraccionarios. */
+    const uint32_t humedad_q22_10 = (uint32_t)(humedad >> 12);
+    return (humedad_q22_10 * 100U + 512U) >> 10;
 }
 
 static esp_err_t leer_medicion(bme280_t *sensor, bme280_medicion_t *medicion)
@@ -364,10 +367,11 @@ static void tarea_sensor(void *argumento)
                     : (uint32_t)medicion.temperatura_centigrados;
             ESP_LOGI(TAG,
                      "BME280: T=%s%" PRIu32 ".%02" PRIu32
-                     " C, P=%" PRIu32 " Pa, HR=%" PRIu32 ".%02" PRIu32 "%%",
+                     " C, P=%" PRIu32 ".%02" PRIu32
+                     " hPa, HR=%" PRIu32 ".%02" PRIu32 "%%",
                      temperatura_negativa ? "-" : "",
                      temperatura_absoluta / 100, temperatura_absoluta % 100,
-                     medicion.presion_pa,
+                     medicion.presion_pa / 100, medicion.presion_pa % 100,
                      medicion.humedad_centiporcentaje / 100,
                      medicion.humedad_centiporcentaje % 100);
         }
