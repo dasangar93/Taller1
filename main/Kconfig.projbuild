@@ -27,7 +27,7 @@ menu "SEyTR - Taller 1"
         config SEYTR_GUARDA_MS
             int "Tiempo de guarda antirebote, en milisegundos"
             range 1 500
-            default 50
+            default 200
             help
                 Tiempo de la ventana temporal que descarta lo que 
                 llegue demasiado pronto.
@@ -35,7 +35,7 @@ menu "SEyTR - Taller 1"
         config SEYTR_TAMANO_COLA
             int "Tamaño de la cola de tareas, usada para atender el pulsador"
             range 5 50
-            default 10
+            default 20
             help
                 Define el número máximo de tareas pendientes que puede almacenar
                 la cola de atención del pulsador. Un valor mayor permite procesar

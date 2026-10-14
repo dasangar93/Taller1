@@ -112,7 +112,7 @@ static void tarea_entrada(void *argumento)
 
         ultima_aceptada_us = esp_timer_get_time();
 
-        ESP_LOGI(TAG, "Pulsacion valida: %lu", (unsigned long)contador);
+        ESP_LOGI(TAG, "Pulsador activado");
     }
 }
 
